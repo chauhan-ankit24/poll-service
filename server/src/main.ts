@@ -12,7 +12,6 @@ async function bootstrap() {
         /^http:\/\/192\.168\.1\.([1-9]|[1-9]\d):8080$/,
       ],
     },
-
   });
 
   const configService = app.get(ConfigService);
@@ -20,7 +19,5 @@ async function bootstrap() {
   await app.listen(port);
 
   logger.log(`Server running on port ${port}`);
-  
-
 }
 bootstrap();
