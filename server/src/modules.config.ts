@@ -1,10 +1,14 @@
-import { Logger } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RedisModule } from './redis.module';
+// This file dynamically registers a Redis module in a NestJS application using environment-based configuration.
 
-// Register the Redis module asynchronously with dynamic configuration
+import { Logger } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config'; // ConfigModule: Provides access to environment variables defined in .env or config files. ConfigService: A service that reads those variables using .get('VAR_NAME').
+import { RedisModule } from './redis.module'; // Imports custom or third-party RedisModule from a local file. This is the module that will be registered with configuration in this file.
+
+// Telling NestJS: “I want to register the RedisModule, but I’ll give you the configuration dynamically.”
 export const redisModule = RedisModule.registerAsync({
-  imports: [ConfigModule], // Import ConfigModule to access environment variables
+  imports: [ConfigModule], // Please include the ConfigModule so I can read the .env file.
+
+  // You give a function (useFactory) that runs and builds the Redis configuration.
   useFactory: async (configService: ConfigService) => {
     const logger = new Logger('RedisModule'); // Logger instance for logging Redis events
 
@@ -32,5 +36,5 @@ export const redisModule = RedisModule.registerAsync({
       },
     };
   },
-  inject: [ConfigService], // Inject ConfigService into useFactory
+  inject: [ConfigService], // You’re asking NestJS to inject ConfigService into it so you can read things like REDIS_HOST.
 });
