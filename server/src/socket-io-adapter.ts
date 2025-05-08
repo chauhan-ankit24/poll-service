@@ -1,8 +1,10 @@
 // Import necessary classes and interfaces from NestJS and Socket.IO
 import { INestApplicationContext, Logger } from '@nestjs/common'; // INestApplicationContext for application context, Logger for logging
 import { ConfigService } from '@nestjs/config'; // ConfigService to access configuration variables
+import { JwtService } from '@nestjs/jwt';
 import { IoAdapter } from '@nestjs/platform-socket.io'; // IoAdapter to create a Socket.IO adapter for NestJS
-import { ServerOptions } from 'socket.io'; // ServerOptions for configuring the Socket.IO server
+import { ServerOptions, Server } from 'socket.io'; // ServerOptions for configuring the Socket.IO server
+import { SocketWithAuth } from './polls/types';
 
 // Create a custom SocketIOAdapter class that extends the default IoAdapter
 export class SocketIOAdapter extends IoAdapter {
@@ -43,7 +45,31 @@ export class SocketIOAdapter extends IoAdapter {
       cors, // Add the custom CORS options
     };
 
-    // Return the created Socket.IO server, even though the method signature says it returns void
-    return super.createIOServer(port, optionsWithCORS);
+    const jwtService = this.app.get(JwtService);
+    const server: Server = super.createIOServer(port, optionsWithCORS);
+
+    server.of('polls').use(createTokenMiddleware(jwtService, this.logger));
+
+    return server;
   }
 }
+
+const createTokenMiddleware =
+  (jwtService: JwtService, logger: Logger) =>
+  (socket: SocketWithAuth, next) => {
+    // for Postman testing support, fallback to token header
+    const token =
+      socket.handshake.auth.token || socket.handshake.headers['token'];
+
+    logger.debug(`Validating auth token before connection: ${token}`);
+
+    try {
+      const payload = jwtService.verify(token);
+      socket.userID = payload.sub;
+      socket.pollID = payload.pollID;
+      socket.name = payload.name;
+      next();
+    } catch {
+      next(new Error('FORBIDDEN'));
+    }
+  };
